@@ -130,6 +130,8 @@ bool ProfileTimingPrint::runOnModule(Module &M)
    double AmountOfMpiComm = 0.0;//add by haomeng. The amount of commucation of mpi
    double RealMpiTime = 0.0;//add by haomeng. The real time of mpi
    double RealWaitTime = 0.0;//add by haomeng. The real wait time of mpi
+   std::map<std::string, double> InstNum;
+   std::map<std::string, double> InstTime;
    for(TimingSource* S : Sources){
       if (isa<BBlockTiming>(S)
           && BlockTiming < DBL_EPSILON) { // BlockTiming is Zero
@@ -151,6 +153,23 @@ bool ProfileTimingPrint::runOnModule(Module &M)
                   auto IRT = cast<IrinstTiming>(BT);
                   double IR_C = IRT->ir_count(*BB);
                   AllIrNum += (exec_times * IR_C);
+                  for(BasicBlock::iterator II = BB->begin(), IE = BB->end(); II != IE; II++){
+                     std::string strtmp = II->getOpcodeName();
+                     try{
+                        InstNum[strtmp]+=exec_times;
+                     }
+                     catch(std::out_of_range& e)
+                     {
+                        InstNum[strtmp] = exec_times;
+                     }
+                     try{
+                        InstTime[strtmp]+=(exec_times*IRT->count(*II));
+                     }
+                     catch(std::out_of_range& e)
+                     {
+                        InstTime[strtmp] = (exec_times*IRT->count(*II));
+                     }
+                  }
                }
 
 
@@ -255,6 +274,253 @@ bool ProfileTimingPrint::runOnModule(Module &M)
    outs()<<"Comm Amount: "<< AmountOfMpiComm<< "\n";
    outs()<<"Real MPI Timing: "<< RealMpiTime*pow(10,9) << " ns\n";
    outs()<<"Real MPI Wait Timing: "<< RealWaitTime*pow(10,9) << " ns\n";
+   {
+      outs()<<"================The counts of instructions===========\n";
+      typedef std::pair<std::string, double> PAIR;
+      double allinstnum = 0.0;
+      std::vector<PAIR> maptovec(InstNum.begin(),InstNum.end());
+      std::sort(maptovec.begin(),maptovec.end(),[](PAIR& x, PAIR& y){return x.second > y.second;});
+      for(std::vector<PAIR>::iterator iter = maptovec.begin();iter != maptovec.end();iter++)
+      {
+         outs()<<iter->first<<"\t\t\t"<<iter->second<<"\n";
+         allinstnum += iter->second;
+      }
+      outs() << "All Num:\t"<<allinstnum<<"\n";
+
+      std::function<double(std::string)> JudgeGroup = [&InstNum](std::string opstr)->double
+      {
+
+         std::map<std::string,double>::iterator iter = InstNum.find(opstr);
+         if(iter == InstNum.end())
+            return 0;
+         else
+            return InstNum[opstr];
+      };
+      std::map<std::string, double> groupOps1 = 
+      {
+         {"load", JudgeGroup("load")}
+      };
+
+      std::map<std::string, double> groupOps2 = 
+      {
+         {"add", JudgeGroup("add")},
+         {"sub", JudgeGroup("sub")},
+         {"shl", JudgeGroup("shl")},
+         {"lshr", JudgeGroup("lshr")},
+         {"ashr", JudgeGroup("ashr")},
+         {"and", JudgeGroup("and")},
+         {"or", JudgeGroup("or")},
+         {"xor", JudgeGroup("xor")},
+         {"alloca", JudgeGroup("alloca")},
+         {"ptrtoint", JudgeGroup("ptrtoint")},
+         {"bitcast", JudgeGroup("bitcast")}
+      };
+
+      std::map<std::string, double> groupOps3 = 
+      {
+         {"fadd", JudgeGroup("fadd")},
+         {"fmul", JudgeGroup("fmul")},
+         {"fsub", JudgeGroup("fsub")},
+         {"mul", JudgeGroup("mul")},
+         {"select", JudgeGroup("select")},
+         {"fcmp", JudgeGroup("fcmp")},
+         {"icmp", JudgeGroup("icmp")},
+         {"inttoptr", JudgeGroup("inttoptr")},
+         {"zext", JudgeGroup("zext")},
+         {"sext", JudgeGroup("sext")},
+         {"trunc", JudgeGroup("trunc")},
+         {"uitofp", JudgeGroup("uitofp")}
+      };
+
+      std::map<std::string, double> groupOps4 = 
+      {
+         {"fptrunc", JudgeGroup("fptrunc")},
+         {"fpext", JudgeGroup("fpext")},
+         {"fptoui", JudgeGroup("fptoui")},
+         {"fptosi", JudgeGroup("fptosi")},
+         {"sitofp", JudgeGroup("sitofp")}
+      };
+
+      std::map<std::string, double> groupOps5 = 
+      {
+         {"udiv", JudgeGroup("udiv")},
+         {"sdiv", JudgeGroup("sdiv")},
+         {"fdiv", JudgeGroup("fdiv")},
+         {"urem", JudgeGroup("urem")},
+         {"srem", JudgeGroup("srem")},
+         {"frem", JudgeGroup("frem")}
+      };
+
+      std::map<std::string, double> groupOps6 = 
+      {
+         {"call", JudgeGroup("call")},
+         {"phi", JudgeGroup("phi")},
+         {"br", JudgeGroup("br")},
+         {"unreachable", JudgeGroup("unreachable")},
+         {"ret", JudgeGroup("ret")}
+      };
+      std::map<std::string, double> groupOps7 = 
+      {
+         {"store", JudgeGroup("store")}
+      };
+      std::map<std::string, double> groupOps8 = 
+      {
+         {"getelementptr", JudgeGroup("getelementptr")}
+      };
+      std::function<double(std::map<std::string, double>&) > GroupSum = [](std::map<std::string, double>& groupOps)->double
+      {
+
+         std::map<std::string,double>::iterator iter;
+         double sum = 0.0;
+         for(iter = groupOps.begin(); iter != groupOps.end(); iter++)
+            sum+=iter->second;
+
+         return sum;
+      };
+
+
+      outs() << "===============The ins count of Instruction Groups===========\n";
+      double groupall[8];
+      groupall[0] = GroupSum(groupOps1);
+      groupall[1] = GroupSum(groupOps2);
+      groupall[2] = GroupSum(groupOps3);
+      groupall[3] = GroupSum(groupOps4);
+      groupall[4] = GroupSum(groupOps5);
+      groupall[5] = GroupSum(groupOps6);
+      groupall[6] = GroupSum(groupOps7);
+      groupall[7] = GroupSum(groupOps8);
+      double allInstNum = 0.0;
+      for(int i = 0; i < 8;i++){
+         allInstNum+=groupall[i];
+         outs()<<groupall[i]<<" ";
+      }
+     // outs()<<"Group1:\t"<<groupall[0]<<"\n";
+     // outs()<<"Group2:\t"<<groupall[1]<<"\n";
+     // outs()<<"Group3:\t"<<groupall[2]<<"\n";
+     // outs()<<"Group4:\t"<<groupall[3]<<"\n";
+     // outs()<<"Group5:\t"<<groupall[4]<<"\n";
+     // outs()<<"Group6:\t"<<groupall[5]<<"\n";
+     // outs()<<"Group7:\t"<<groupall[6]<<"\n";
+     // outs()<<"Group8:\t"<<groupall[7]<<"\n";
+     // outs()<<"\nGroupAll:\t"<<allInstNum<<"\n";
+      outs()<<"\n======\n";
+      //double paras[8] = {-96.8128, -88.0085, -20.0678, 849.458, -2008.82, -83.3543, 189.144, 187.222};//ep,sp,lu:pred
+      double paras[8] = {49.5664, 66.8576, -2.734, -129.921, 333.339, -10.6375, -10.8649, -99.7951};//ft,mg,cg:pred
+      double predcomtime = 0.0;
+      for(int i = 0; i < 8;i++)
+         predcomtime+=(groupall[i]*paras[i]);
+      outs()<<"Pred computation time: "<<predcomtime+CallTiming <<"\n";
+   }
+   {
+      outs()<<"================The time of instructions===========\n";
+      typedef std::pair<std::string, double> PAIR;
+      double allinsttime = 0.0;
+      std::vector<PAIR> maptovec(InstTime.begin(),InstTime.end());
+      std::sort(maptovec.begin(),maptovec.end(),[](PAIR& x, PAIR& y){return x.second > y.second;});
+      for(std::vector<PAIR>::iterator iter = maptovec.begin();iter != maptovec.end();iter++)
+      {
+         outs()<<iter->first<<"\t\t\t"<<iter->second<<"\n";
+         allinsttime += iter->second;
+      }
+      outs() << "All Num:\t"<<allinsttime<<"\n";
+
+      std::function<double(std::string)> JudgeGroup = [&InstTime](std::string opstr)->double
+      {
+
+         std::map<std::string,double>::iterator iter = InstTime.find(opstr);
+         if(iter == InstTime.end())
+            return 0;
+         else
+            return InstTime[opstr];
+      };
+      std::map<std::string, double> groupOps1 = 
+      {
+         {"load", JudgeGroup("load")},
+         {"store", JudgeGroup("store")},
+         {"alloca", JudgeGroup("alloca")},
+         {"getelementptr", JudgeGroup("getelementptr")}
+
+      };
+
+      std::map<std::string, double> groupOps2 = 
+      {
+         {"fadd", JudgeGroup("fadd")},
+         {"fmul", JudgeGroup("fmul")},
+         {"fsub", JudgeGroup("fsub")},
+         {"fcmp", JudgeGroup("fcmp")},
+         {"uitofp", JudgeGroup("uitofp")},
+         {"fptrunc", JudgeGroup("fptrunc")},
+         {"fpext", JudgeGroup("fpext")},
+         {"fptoui", JudgeGroup("fptoui")},
+         {"fptosi", JudgeGroup("fptosi")},
+         {"sitofp", JudgeGroup("sitofp")},
+         {"fdiv", JudgeGroup("fdiv")},
+         {"frem", JudgeGroup("frem")}
+
+      };
+      std::map<std::string, double> groupOps3 = 
+      {
+         {"add", JudgeGroup("add")},
+         {"sub", JudgeGroup("sub")},
+         {"shl", JudgeGroup("shl")},
+         {"lshr", JudgeGroup("lshr")},
+         {"ashr", JudgeGroup("ashr")},
+         {"and", JudgeGroup("and")},
+         {"or", JudgeGroup("or")},
+         {"xor", JudgeGroup("xor")},
+         {"ptrtoint", JudgeGroup("ptrtoint")},
+         {"bitcast", JudgeGroup("bitcast")},
+         {"mul", JudgeGroup("mul")},
+         {"select", JudgeGroup("select")},
+         {"icmp", JudgeGroup("icmp")},
+         {"inttoptr", JudgeGroup("inttoptr")},
+         {"zext", JudgeGroup("zext")},
+         {"sext", JudgeGroup("sext")},
+         {"trunc", JudgeGroup("trunc")},
+         {"udiv", JudgeGroup("udiv")},
+         {"sdiv", JudgeGroup("sdiv")},
+         {"urem", JudgeGroup("urem")},
+         {"srem", JudgeGroup("srem")}
+      };
+
+      std::function<double(std::map<std::string, double>&) > GroupSum = [](std::map<std::string, double>& groupOps)->double
+      {
+
+         std::map<std::string,double>::iterator iter;
+         double sum = 0.0;
+         for(iter = groupOps.begin(); iter != groupOps.end(); iter++)
+            sum+=iter->second;
+
+         return sum;
+      };
+
+
+      outs() << "===============The ins time of Instruction Groups===========\n";
+      double groupall[3];
+      groupall[0] = GroupSum(groupOps1);
+      groupall[1] = GroupSum(groupOps2);
+      groupall[2] = GroupSum(groupOps3);
+      double allInsttime = 0.0;
+      for(int i = 0; i < 3;i++){
+         allInsttime+=groupall[i];
+         outs()<<groupall[i]<<" ";
+      }
+      outs()<<"\n";
+      outs()<<"Group1:\t"<<groupall[0]<<"\n";
+      outs()<<"Group2:\t"<<groupall[1]<<"\n";
+      outs()<<"Group3:\t"<<groupall[2]<<"\n";
+      outs()<<"\nGroupAll:\t"<<allInsttime<<"\n";
+      outs()<<"\n======\n";
+      //double paras[8] = {-96.8128, -88.0085, -20.0678, 849.458, -2008.82, -83.3543, 189.144, 187.222};//ep,sp,lu:pred
+      double paras[3] = {0.1, 0.2,0.7};//mpi,bt,pred
+      //double paras[3] = {0.5, 0.2,0.7};//mpi,ft,pred
+      //double paras[3] = {0.15, 0.2,0.7};//mpi,lu,pred
+      double predcomtime = 0.0;
+      for(int i = 0; i < 3;i++)
+         predcomtime+=(groupall[i]*paras[i]);
+      outs()<<"Pred computation time1: "<<predcomtime+CallTiming <<"\n";
+   }
+
    return false;
 }
 

@@ -680,9 +680,16 @@ double MPBenchTiming::count(const llvm::Instruction& I, double bfreq,
 
 static const std::map<StringRef, LibFnTiming::EnumTy> LibFnMap = 
 {
-   {"sqrt", SQRT},
-   {"log",  LOG},
-   {"fabs", FABS}
+   {"sqrt"  , SQRT     } ,
+   {"log"   , LOG      } ,
+   {"fabs"  , FABS     } ,
+   {"trunc" , TRUNCFUN } ,
+   {"exp"   , EXP      } ,
+   {"cos"   , COS      } ,
+   {"sin"   , SIN      } ,
+   {"logf"  , LOGF     } ,
+   {"pow"   , POW      } ,
+   {"cabs"  , CABS     }
 };
 void LibFnTiming::load_libfn(const char* file, double* param)
 {
@@ -704,6 +711,7 @@ double LibFnTiming::count(const llvm::CallInst& CI, double bfreq) const
       return 0.;
    try {
       ret = bfreq * get(LibFnMap.at(F->getName()));
+      errs()<<F->getName()<<"\t" <<ret<<"\t"<<bfreq<<"\n";
    }
    catch (std::out_of_range& e) {
       ret = 0.;

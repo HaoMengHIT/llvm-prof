@@ -270,7 +270,7 @@ class LatencyTiming : public MPITiming, public _timing_source::T<MPISpec>
    double Comm_amount(const llvm::Instruction& I, double bfreq, double total) const;
 };
 
-enum LibFnSpec { SQRT, LOG, FABS, LibFnNumSpec };
+enum LibFnSpec { SQRT, LOG, FABS, TRUNCFUN, EXP, COS, SIN, LOGF, POW, CABS, LibFnNumSpec };
 
 class LibFnTiming : public LibCallTiming, public _timing_source::T<LibFnSpec> 
 {
