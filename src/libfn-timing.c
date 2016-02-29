@@ -9,8 +9,9 @@
 #include <math.h>
 #include <sys/time.h>
 #include <float.h>
+#include <complex.h>
 
-#define REPNUM 10000
+#define REPNUM 20000
 #define INTREP 100
 #define REPEAT(FUNC)                                                           \
    {                                                                           \
@@ -29,6 +30,41 @@
       printf(#FUNC ":\t%lf nanoseconds,\t%lu cycles\n", cycle* res, cycle);    \
    }
 
+#define REPEATPOW(FUNC)                                                        \
+   {                                                                           \
+      unsigned i, j;                                                           \
+      for (i = 0; i < REPNUM; ++i) {                                           \
+         PARAASSIGN;                                                           \
+		 double tmp = fmod(PARALIST,2.0);											   \
+         beg = timing();                                                       \
+         for (j = 0; j < INTREP; ++j) {                                        \
+            ref += FUNC(PARALIST,tmp);		                                   \
+         }                                                                     \
+         end = timing();                                                       \
+         sum[i] = (end - beg) / INTREP;                                        \
+      }                                                                        \
+      ref /= REPNUM;                                                           \
+      uint64_t cycle = median(sum, REPNUM);                                    \
+      printf(#FUNC ":\t%lf nanoseconds,\t%lu cycles\n", cycle* res, cycle);    \
+   }
+
+#define REPEATCABS(FUNC)                                                       \
+   {                                                                           \
+      unsigned i, j;                                                           \
+      for (i = 0; i < REPNUM; ++i) {                                           \
+         PARAASSIGN;                                                           \
+		 complex z = PARALIST + fmod(PARALIST, 2)*I;     			     	   \
+         beg = timing();                                                       \
+         for (j = 0; j < INTREP; ++j) {                                        \
+            ref += FUNC(z);					                                   \
+         }                                                                     \
+         end = timing();                                                       \
+         sum[i] = (end - beg) / INTREP;                                        \
+      }                                                                        \
+      ref /= REPNUM;                                                           \
+      uint64_t cycle = median(sum, REPNUM);                                    \
+      printf(#FUNC ":\t%lf nanoseconds,\t%lu cycles\n", cycle* res, cycle);    \
+   }
 static double double_rand(){
    struct timeval t = {0};
    gettimeofday(&t, NULL);
@@ -58,6 +94,13 @@ int main()
    REPEAT(sqrt);
    REPEAT(fabs);
    REPEAT(log);
+   REPEAT(trunc);
+   REPEAT(exp);
+   REPEAT(cos);
+   REPEAT(sin);
+   REPEAT(logf);
+   REPEATPOW(pow);
+   REPEATCABS(cabs);
 #undef PARAASSIGN
 #undef PARALIST
    return 0;
