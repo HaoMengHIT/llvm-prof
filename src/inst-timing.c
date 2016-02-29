@@ -8,7 +8,7 @@
 #include "libtiming.c"
 
 #define REPNUM 50000
-#define INSNUM 4000
+#define INSNUM 2500
 #define ALLOCA_NUM 100
 
 //ref+=inst_template(TEMPLATE,VAR);

@@ -70,15 +70,48 @@ Value* lle::InstTemplate::implyTemplate(CallInst *Template) const
    return Found->second(Template);
 }
 
-#define REPEAT 4000
+#define REPEAT 2500
 static Value* fix_add(Instruction *InsPoint)
 {
    Type* I32Ty = Type::getInt32Ty(InsPoint->getContext());
    Value* One = ConstantInt::get(I32Ty, 1);
    Value* Lhs = One;
-   for(int i=0;i<REPEAT;++i){
-      Lhs = BinaryOperator::CreateAdd(Lhs, One, "", InsPoint);
+   Value* InsArray[REPEAT];
+   BasicBlock* BB = InsPoint->getParent();
+   Instruction* isLoad = &(*(BB->getInstList().begin()));
+   while(true)
+   {
+      isLoad = BB->getInstList().getNext(isLoad);
+      if(isa<LoadInst>(isLoad)){
+         Instruction* tmp = BB->getInstList().getNext(isLoad);
+         isLoad = new LoadInst(isLoad, "", tmp);
+         errs()<<*isLoad<<"==============\n";
+         break;
+      }
    }
+   for(int i=0;i<REPEAT;++i){
+      Value* Num = ConstantInt::get(I32Ty, i+1);
+      Lhs = BinaryOperator::CreateAdd(isLoad, Num, "", InsPoint);
+      InsArray[i] = Lhs;
+   }
+   Instruction* isCall = InsPoint;
+   while(true)
+   {
+      isCall = BB->getInstList().getNext(isCall);
+      if(isa<CallInst>(isCall)){
+         isCall = BB->getInstList().getNext(isCall);
+         break;
+      }
+   }
+   Value* LhsAfterCall = Lhs;
+   for(int i = 0; i<REPEAT;++i){
+      LhsAfterCall = BinaryOperator::CreateAdd(LhsAfterCall, InsArray[i],"",isCall);
+   }
+   AllocaInst* a;
+   StoreInst* s;
+   a = new AllocaInst(I32Ty,"",BB->getTerminator());
+   s = new StoreInst(LhsAfterCall,a,"",BB->getTerminator());
+   s->setVolatile(true);
    return Lhs;
 }
 
