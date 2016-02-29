@@ -29,7 +29,6 @@
 #define REPEAT_ALLOCA_INST(TEMPLATE, VAR...) REPEAT(TEMPLATE, ALLOCA_NUM, ##VAR)
 #define REPEAT_GETELE_INST(TEMPLATE, VAR...) REPEAT(TEMPLATE, REPNUM, element, ##VAR)
 
-static int element[1][INSNUM][2];
 static double cycle_time;         
 
 static int int_less(const void* pl, const void* pr)
@@ -47,6 +46,7 @@ static uint64_t median(uint64_t* arr, size_t len)
 int main()
 {
    //Here we can also read system file to obtain the hightest CPU frequency  
+   double element[1][INSNUM][2];
    printf("Warnning: shouldn't use this program on laptop\n");
    cycle_time = timing_res();
    printf("CPU freq: %lf GHz\n",1/cycle_time);
