@@ -70,7 +70,7 @@ Value* lle::InstTemplate::implyTemplate(CallInst *Template) const
    return Found->second(Template);
 }
 
-#define REPEAT 2000
+#define REPEAT 4000
 static Value* fix_add(Instruction *InsPoint)
 {
    Type* I32Ty = Type::getInt32Ty(InsPoint->getContext());
