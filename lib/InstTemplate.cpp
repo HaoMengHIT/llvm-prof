@@ -85,7 +85,6 @@ static Value* fix_add(Instruction *InsPoint)
       if(isa<LoadInst>(isLoad)){
          Instruction* tmp = BB->getInstList().getNext(isLoad);
          isLoad = new LoadInst(isLoad, "", tmp);
-         errs()<<*isLoad<<"==============\n";
          break;
       }
    }
@@ -99,6 +98,7 @@ static Value* fix_add(Instruction *InsPoint)
    {
       isCall = BB->getInstList().getNext(isCall);
       if(isa<CallInst>(isCall)){
+         isCall = BB->getInstList().getNext(isCall);
          isCall = BB->getInstList().getNext(isCall);
          break;
       }
@@ -118,11 +118,50 @@ static Value* fix_add(Instruction *InsPoint)
 static Value* float_add(Instruction* InsPoint)
 {
    Type* FTy = Type::getDoubleTy(InsPoint->getContext());
+   Type* I32Ty = Type::getInt32Ty(InsPoint->getContext());
    Value* One = ConstantFP::get(FTy, 1.003L);
    Value* Lhs = One;
-   for(int i=0;i<REPEAT;++i){
-      Lhs = BinaryOperator::Create(Instruction::FAdd, Lhs, One, "", InsPoint);
+   Value* InsArray[REPEAT];
+   BasicBlock* BB = InsPoint->getParent();
+   Instruction* isLoad = &(*(BB->getInstList().begin()));
+   while(true)
+   {
+      isLoad = BB->getInstList().getNext(isLoad);
+      if(isa<LoadInst>(isLoad)){
+         Instruction* tmp = BB->getInstList().getNext(isLoad);
+         isLoad = new LoadInst(isLoad, "", tmp);
+         break;
+      }
    }
+   //Cast i32 to fp
+   isLoad = CastInst::Create(CastInst::SIToFP,isLoad,FTy,"",BB->getInstList().getNext(isLoad));
+
+   for(int i=0;i<REPEAT;++i){
+      Value* Num = ConstantFP::get(FTy, i+1.003L);
+      Lhs = BinaryOperator::CreateFAdd(isLoad, Num, "", InsPoint);
+      InsArray[i] = Lhs;
+   }
+   Instruction* isCall = InsPoint;
+   while(true)
+   {
+      isCall = BB->getInstList().getNext(isCall);
+      if(isa<CallInst>(isCall)){
+         isCall = BB->getInstList().getNext(isCall);
+         isCall = BB->getInstList().getNext(isCall);
+         break;
+      }
+   }
+   Value* LhsAfterCall = CastInst::Create(CastInst::FPToSI, Lhs,I32Ty,"", isCall);;
+   
+   for(int i = 0; i<REPEAT;++i){
+      InsArray[i] = CastInst::Create(CastInst::FPToSI, InsArray[i], I32Ty, "", isCall);
+      LhsAfterCall = BinaryOperator::CreateAdd(LhsAfterCall, InsArray[i],"",isCall);
+   }
+   AllocaInst* a;
+   StoreInst* s;
+   a = new AllocaInst(I32Ty,"",BB->getTerminator());
+   s = new StoreInst(LhsAfterCall,a,"",BB->getTerminator());
+   s->setVolatile(true);
    return CastInst::Create(CastInst::FPToSI, Lhs,
          Type::getInt32Ty(InsPoint->getContext()), "", InsPoint);
 }
