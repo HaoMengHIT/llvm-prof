@@ -70,7 +70,7 @@ Value* lle::InstTemplate::implyTemplate(CallInst *Template) const
    return Found->second(Template);
 }
 
-#define REPEAT 2500
+#define REPEAT 300
 static Value* fix_add(Instruction *InsPoint)
 {
    Type* I32Ty = Type::getInt32Ty(InsPoint->getContext());
@@ -168,21 +168,94 @@ static Value* float_add(Instruction* InsPoint)
 
 static Value* fix_sub(Instruction* InsPoint){
    Type* I32Ty = Type::getInt32Ty(InsPoint->getContext());
-   Value* One = ConstantInt::get(I32Ty, 10);
-   Value* Lhs = ConstantInt::get(I32Ty, 20*REPEAT);
-   for(int i = 0;i < REPEAT; ++i){
-      Lhs = BinaryOperator::Create(Instruction::Sub, Lhs, One,"",InsPoint);
+   Value* One = ConstantInt::get(I32Ty, 1);
+   Value* Lhs = One;
+   Value* InsArray[REPEAT];
+   BasicBlock* BB = InsPoint->getParent();
+   Instruction* isLoad = &(*(BB->getInstList().begin()));
+   while(true)
+   {
+      isLoad = BB->getInstList().getNext(isLoad);
+      if(isa<LoadInst>(isLoad)){
+         Instruction* tmp = BB->getInstList().getNext(isLoad);
+         isLoad = new LoadInst(isLoad, "", tmp);
+         break;
+      }
    }
+   for(int i=0;i<REPEAT;++i){
+      Value* Num = ConstantInt::get(I32Ty, i+1);
+      Lhs = BinaryOperator::CreateSub(Num, isLoad, "", InsPoint);
+      InsArray[i] = Lhs;
+   }
+   Instruction* isCall = InsPoint;
+   while(true)
+   {
+      isCall = BB->getInstList().getNext(isCall);
+      if(isa<CallInst>(isCall)){
+         isCall = BB->getInstList().getNext(isCall);
+         isCall = BB->getInstList().getNext(isCall);
+         break;
+      }
+   }
+   Value* LhsAfterCall = Lhs;
+   for(int i = 0; i<REPEAT;++i){
+      LhsAfterCall = BinaryOperator::CreateAdd(LhsAfterCall, InsArray[i],"",isCall);
+   }
+   AllocaInst* a;
+   StoreInst* s;
+   a = new AllocaInst(I32Ty,"",BB->getTerminator());
+   s = new StoreInst(LhsAfterCall,a,"",BB->getTerminator());
+   s->setVolatile(true);
    return Lhs;
 }
 static Value* float_sub(Instruction* InsPoint){
    Type* FTy = Type::getDoubleTy(InsPoint->getContext());
-   Value* One = ConstantFP::get(FTy,10.1L);
-   Value* Lhs = ConstantFP::get(FTy,20L*REPEAT);
-   for(int i = 0;i < REPEAT;++i){
-      Lhs = BinaryOperator::Create(Instruction::FSub,Lhs,One,"",InsPoint);
+   Type* I32Ty = Type::getInt32Ty(InsPoint->getContext());
+   Value* One = ConstantFP::get(FTy, 1.003L);
+   Value* Lhs = One;
+   Value* InsArray[REPEAT];
+   BasicBlock* BB = InsPoint->getParent();
+   Instruction* isLoad = &(*(BB->getInstList().begin()));
+   while(true)
+   {
+      isLoad = BB->getInstList().getNext(isLoad);
+      if(isa<LoadInst>(isLoad)){
+         Instruction* tmp = BB->getInstList().getNext(isLoad);
+         isLoad = new LoadInst(isLoad, "", tmp);
+         break;
+      }
    }
-   return CastInst::Create(CastInst::FPToSI,Lhs,Type::getInt32Ty(InsPoint->getContext()),"",InsPoint);
+   //Cast i32 to fp
+   isLoad = CastInst::Create(CastInst::SIToFP,isLoad,FTy,"",BB->getInstList().getNext(isLoad));
+
+   for(int i=0;i<REPEAT;++i){
+      Value* Num = ConstantFP::get(FTy, i+1.003L);
+      Lhs = BinaryOperator::CreateFSub(Num,isLoad, "", InsPoint);
+      InsArray[i] = Lhs;
+   }
+   Instruction* isCall = InsPoint;
+   while(true)
+   {
+      isCall = BB->getInstList().getNext(isCall);
+      if(isa<CallInst>(isCall)){
+         isCall = BB->getInstList().getNext(isCall);
+         isCall = BB->getInstList().getNext(isCall);
+         break;
+      }
+   }
+   Value* LhsAfterCall = CastInst::Create(CastInst::FPToSI, Lhs,I32Ty,"", isCall);;
+   
+   for(int i = 0; i<REPEAT;++i){
+      InsArray[i] = CastInst::Create(CastInst::FPToSI, InsArray[i], I32Ty, "", isCall);
+      LhsAfterCall = BinaryOperator::CreateAdd(LhsAfterCall, InsArray[i],"",isCall);
+   }
+   AllocaInst* a;
+   StoreInst* s;
+   a = new AllocaInst(I32Ty,"",BB->getTerminator());
+   s = new StoreInst(LhsAfterCall,a,"",BB->getTerminator());
+   s->setVolatile(true);
+   return CastInst::Create(CastInst::FPToSI, Lhs,
+         Type::getInt32Ty(InsPoint->getContext()), "", InsPoint);
 }
 
 static Value* fix_mul(Instruction* InsPoint){
