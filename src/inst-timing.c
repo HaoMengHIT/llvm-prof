@@ -8,7 +8,7 @@
 #include "libtiming.c"
 
 #define REPNUM 50000
-#define INSNUM 2000
+#define INSNUM 300
 #define ALLOCA_NUM 100
 
 //ref+=inst_template(TEMPLATE,VAR);
@@ -29,7 +29,7 @@
 #define REPEAT_ALLOCA_INST(TEMPLATE, VAR...) REPEAT(TEMPLATE, ALLOCA_NUM, ##VAR)
 #define REPEAT_GETELE_INST(TEMPLATE, VAR...) REPEAT(TEMPLATE, REPNUM, element, ##VAR)
 
-static int element[1][INSNUM][2];
+static double element[1][INSNUM][2];
 static double cycle_time;         
 
 static int int_less(const void* pl, const void* pr)
@@ -50,7 +50,8 @@ int main()
    printf("Warnning: shouldn't use this program on laptop\n");
    cycle_time = timing_res();
    printf("CPU freq: %lf GHz\n",1/cycle_time);
-   volatile int* var = malloc(sizeof(int));
+   int* var = (int*)malloc(sizeof(int));
+   *var = 10;
    uint64_t beg, end, sum[REPNUM];
    int ref = 0;
    uint64_t t_err = timing_err();

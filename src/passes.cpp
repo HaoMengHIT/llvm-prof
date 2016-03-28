@@ -112,6 +112,37 @@ bool ProfileInfoCompare::run()
 #undef CRITICAL_EQUAL
 }
 
+char ProfileInfoComm::ID = 0;
+void ProfileInfoComm::getAnalysisUsage(AnalysisUsage &AU) const
+{
+   AU.setPreservesAll();
+   AU.addRequired<ProfileInfo>();
+}
+bool ProfileInfoComm::runOnModule(Module &M)
+{
+   ProfileInfo& PI = getAnalysis<ProfileInfo>();
+   outs()<<"Hello world\n";
+   auto S = PI.getAllTrapedValues(MPIFullInfo);
+   auto U = PI.getAllTrapedValues(MPInfo);
+   if(U.size()>0) outs()<<"Notice: Old Mpi Profiling Format\n";
+   S.insert(S.end(), U.begin(), U.end());
+   for(auto I : S){
+      const CallInst* CI = cast<CallInst>(I);
+      const BasicBlock* BB = CI->getParent();
+      size_t BFreq = PI.getExecutionCount(BB);
+      double MpiComm = PI.getExecutionCount(CI);//LTR->Comm_amount(*I,BFreq,PI.getExecutionCount(CI));
+      if(CI == NULL) continue;
+      Value* CV = const_cast<CallInst*>(CI)->getCalledValue();
+      Function* func = dyn_cast<Function>(lle::castoff(CV));
+      if(func == NULL)
+         errs()<<"No func!\n";
+      StringRef str = func->getName();
+      if(str.startswith("mpi_")){
+         outs()<<str<<"\t"<<(double)(MpiComm/BFreq)<<"\t" << MpiComm<<"\t"<<BFreq<<"\n";
+      }
+   }
+}
+
 
 char ProfileTimingPrint::ID = 0;
 void ProfileTimingPrint::getAnalysisUsage(AnalysisUsage &AU) const
