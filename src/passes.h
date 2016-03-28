@@ -56,9 +56,9 @@ namespace llvm{
    {
       public:
       static char ID;
-      ProfileInfoComm():ModulePass(ID){}
-      void getAnalysisUsage(AnalysisUsage& AU) const;
-      bool runOnModule(Module& M);
+      ProfileInfoComm(): ModulePass(ID){}
+      void getAnalysisUsage(AnalysisUsage& AU) const override;
+      bool runOnModule(Module& M) override;
    };
    class ProfileTimingPrint: public ModulePass
    {

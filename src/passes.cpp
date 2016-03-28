@@ -121,7 +121,6 @@ void ProfileInfoComm::getAnalysisUsage(AnalysisUsage &AU) const
 bool ProfileInfoComm::runOnModule(Module &M)
 {
    ProfileInfo& PI = getAnalysis<ProfileInfo>();
-   outs()<<"Hello world\n";
    auto S = PI.getAllTrapedValues(MPIFullInfo);
    auto U = PI.getAllTrapedValues(MPInfo);
    if(U.size()>0) outs()<<"Notice: Old Mpi Profiling Format\n";
@@ -138,7 +137,7 @@ bool ProfileInfoComm::runOnModule(Module &M)
          errs()<<"No func!\n";
       StringRef str = func->getName();
       if(str.startswith("mpi_")){
-         outs()<<str<<"\t"<<(double)(MpiComm/BFreq)<<"\t" << MpiComm<<"\t"<<BFreq<<"\n";
+         outs()<<str<<"\t"<<(size_t)(MpiComm/BFreq)<<"\t" << MpiComm<<"\t"<<BFreq<<"\n";
       }
    }
 }

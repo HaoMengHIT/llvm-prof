@@ -231,10 +231,6 @@ int main(int argc, char **argv) {
   
   cl::ParseCommandLineOptions(argc, argv, "llvm profile dump decoder\n");
 
-  // Run the printer pass.
-  PassManager PassMgr;
-  PassMgr.add(createProfileLoaderPass(ProfileDataFile));
-
   // Read in the bitcode file...
   std::string ErrorMessage;
   error_code ec;
@@ -245,11 +241,6 @@ int main(int argc, char **argv) {
      
      ProfileInfoCompare Compare(PIL1,PIL2);
      Compare.run();
-     return 0;
-  }
-  if(CommMode) {
-     PassMgr.add(new ProfileInfoComm());
-     PassMgr.run(*M);
      return 0;
   }
   if(Merge != MERGE_NONE) {
@@ -311,6 +302,15 @@ int main(int argc, char **argv) {
      return 1;
   }
 
+  // Run the printer pass.
+  PassManager PassMgr;
+  PassMgr.add(createProfileLoaderPass(ProfileDataFile));
+
+  if(CommMode) {
+     PassMgr.add(new ProfileInfoComm());
+     PassMgr.run(*M);
+     return 0;
+  }
   if(Convert){
      Require3rdArg("no output file");
      ProfileInfoWriter PIW(argv[0], MergeFile.front());
