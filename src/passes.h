@@ -52,6 +52,14 @@ namespace llvm{
          :Lhs(LHS), Rhs(RHS) {}
       bool run();
    };
+   class ProfileInfoComm: public ModulePass
+   {
+      public:
+      static char ID;
+      ProfileInfoComm():ModulePass(ID){}
+      void getAnalysisUsage(AnalysisUsage& AU) const;
+      bool runOnModule(Module& M);
+   };
    class ProfileTimingPrint: public ModulePass
    {
       std::vector<TimingSource*> Sources;
