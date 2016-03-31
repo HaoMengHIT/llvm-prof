@@ -85,6 +85,9 @@ std::map<StringRef, std::pair<MPICategoryType,unsigned char>>
    {"mpi_isend_"     , {MPI_CT_P2P      , 1}} ,
    {"mpi_irecv_"     , {MPI_CT_P2P      , 1}} ,
    {"mpi_bcast_"     , {MPI_CT_BCAST    , 1}} ,
+   {"mpi_gather_"    , {MPI_CT_GATHER   , 1}} ,
+   {"mpi_scatter_"   , {MPI_CT_SCATTER  , 1}} ,
+   {"mpi_allgather_" , {MPI_CT_ALLGATHER, 1}} ,
    {"mpi_alltoall_"  , {MPI_CT_ALLTOALL , 1}} 
 };
 

@@ -40,7 +40,10 @@ namespace lle{
       MPI_CT_NSIDES    = 3,
       MPI_CT_ALLREDUCE = 4,
       MPI_CT_BCAST     = 5,
-      MPI_CT_ALLTOALL  = 6  
+      MPI_CT_GATHER    = 6,
+      MPI_CT_SCATTER   = 7,
+      MPI_CT_ALLGATHER = 8,
+      MPI_CT_ALLTOALL  = 9  
    };
    /**
     * return mpi collection category
