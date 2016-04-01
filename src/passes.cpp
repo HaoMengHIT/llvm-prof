@@ -155,6 +155,7 @@ bool ProfileTimingPrint::runOnModule(Module &M)
    ProfileInfo& PI = getAnalysis<ProfileInfo>();
    double AbsoluteTiming = 0.0, BlockTiming = 0.0, MpiTiming = 0.0, CallTiming = 0.0;
    double MpiTimingsize = 0.0;
+   double MpiFittingTime = 0.0;
    double AllIrNum = 0.0;//add by haomeng. The num of ir
    double MPICallNUM = 0.0;//add by haomeng. The num of mpi callinst
    double AmountOfMpiComm = 0.0;//add by haomeng. The amount of commucation of mpi
@@ -260,6 +261,7 @@ bool ProfileTimingPrint::runOnModule(Module &M)
             //0 means num of processes fixed, 1 means datasize fixed
             double timing = MT->count(*I, PI.getExecutionCount(BB), PI.getExecutionCount(CI)); // IO 模型
             double timingsize = MT->newcount(*I,PI.getExecutionCount(BB),PI.getExecutionCount(CI),1);
+            double fittingtime = MT->fittingcount(*I,PI.getExecutionCount(BB),PI.getExecutionCount(CI));
 
             if(isa<LatencyTiming>(MT))//add by haomeng.
             {
@@ -278,6 +280,7 @@ bool ProfileTimingPrint::runOnModule(Module &M)
 #endif
             MpiTiming += timing;
             MpiTimingsize += timingsize*1000.0;
+            MpiFittingTime += fittingtime;
          }
       }
       if(isa<LibCallTiming>(S) && CallTiming < DBL_EPSILON){
@@ -304,6 +307,7 @@ bool ProfileTimingPrint::runOnModule(Module &M)
    outs()<<"Comm Amount: "<< AmountOfMpiComm<< "\n";
    outs()<<"Real MPI Timing: "<< RealMpiTime*pow(10,9) << " ns\n";
    outs()<<"Real MPI Wait Timing: "<< RealWaitTime*pow(10,9) << " ns\n";
+   outs()<<"MPI Fitting Timing: "<< MpiFittingTime*pow(10,9) << " ns\n";
    {
       outs()<<"================The counts of instructions===========\n";
       typedef std::pair<std::string, double> PAIR;

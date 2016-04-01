@@ -92,6 +92,7 @@ class MPITiming: public TimingSource
    {
       return S->getKind() < Kind::MPILast && S->getKind() > Kind::MPI;
    }
+   virtual double fittingcount(const llvm::Instruction& I, double bfreq, double count) const=0;
    virtual double count(const llvm::Instruction& I, double bfreq,
                         double count) const = 0; // io part
    virtual double newcount(const llvm::Instruction& I, double bfreq,
@@ -224,6 +225,8 @@ class MPBenchReTiming : public MPITiming
    ~MPBenchReTiming();
    void init_with_file(const char* file);
 
+   double fittingcount(const llvm::Instruction& I, double bfreq,
+                double count) const override;
    double count(const llvm::Instruction &I, double bfreq,
                 double count) const override;
     double newcount(const llvm::Instruction &I, double bfreq,
@@ -261,7 +264,9 @@ class LatencyTiming : public MPITiming, public _timing_source::T<MPISpec>
    }
    static void load_files(const char*, double *);
    LatencyTiming();
-
+   
+   double fittingcount(const llvm::Instruction& I, double bfreq,
+                double count) const override;
     //0 means process num is fixed, 1 means datasize is fixed
    double count(const llvm::Instruction& I, double bfreq,
                 double count) const override;
