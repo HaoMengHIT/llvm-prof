@@ -716,7 +716,6 @@ double LibFnTiming::count(const llvm::CallInst& CI, double bfreq) const
       return 0.;
    try {
       ret = bfreq * get(LibFnMap.at(F->getName()));
-      errs()<<F->getName()<<"\t" <<ret<<"\t"<<bfreq<<"\n";
    }
    catch (std::out_of_range& e) {
       ret = 0.;
@@ -842,41 +841,52 @@ double LatencyTiming::fittingcount(const llvm::Instruction& I, double bfreq, dou
    if(commsize == 0){
       return predcommtime*bfreq;
    }
+   Value* CV = const_cast<CallInst*>(CI)->getCalledValue();
+   Function* func = dyn_cast<Function>(lle::castoff(CV));
+   StringRef str = func->getName();
    outs()<<R<<"\t"<<bfreq<<"\t"<<commsize<<"\t";
     switch(C)
     {
         case MPI_CT_P2P:
             predcommtime = 6.48427*pow(10,-6)+6.25025*pow(10,-10)*commsize;
-            outs()<<"p2p\t"<<predcommtime<<"\n";
-            return predcommtime*bfreq;
+            predcommtime = (predcommtime<=0?0:predcommtime)*bfreq;
+            outs()<<str<<"\t"<<predcommtime<<"\n";
+            return predcommtime;
         case MPI_CT_ALLREDUCE:
             predcommtime = 0.00154802+2.85057*pow(10,-6)*R+(-4.2121)*pow(10,-12)*R*commsize+2.75488*pow(10,-10)*(log(R)/log(2))*commsize;//a+b*R+c*R*s+d*log2(R)*s
-            outs()<<"allreduce\t"<<predcommtime<<"\n";
-            return predcommtime*bfreq;
+            predcommtime = (predcommtime<=0?0:predcommtime)*bfreq;
+            outs()<<str<<"\t"<<predcommtime<<"\n";
+            return predcommtime;
         case MPI_CT_REDUCE:
             predcommtime = -0.0043439163+0.000569954*R+7.28533*pow(10,-10)*R*commsize;//a + b*P + c*P*s
-            outs()<<"reduce\t"<<predcommtime<<"\n";
-            return predcommtime*bfreq;
+            predcommtime = (predcommtime<=0?0:predcommtime)*bfreq;
+            outs()<<str<<"\t"<<predcommtime<<"\n";
+            return predcommtime;
         case MPI_CT_BCAST:
             predcommtime = 0.000886714*(log(R)/log(2))+9.59077*pow(10,-11)*(log(R)/log(2))*commsize;//a log2(p) +t * log2(p) s
-            outs()<<"bcast\t"<<predcommtime<<"\n";
-            return predcommtime*bfreq;
+            predcommtime = (predcommtime<=0?0:predcommtime)*bfreq;
+            outs()<<str<<"\t"<<predcommtime<<"\n";
+            return predcommtime;
         case MPI_CT_GATHER:
             predcommtime = -0.000940955+0.0000788645*R+2.69881*pow(10,-10)*R*commsize;//a + b*P + c*P*s
-            outs()<<"gather\t"<<predcommtime<<"\n";
-            return predcommtime*bfreq;
+            predcommtime = (predcommtime<=0?0:predcommtime)*bfreq;
+            outs()<<str<<"\t"<<predcommtime<<"\n";
+            return predcommtime;
         case MPI_CT_SCATTER:
             predcommtime = -0.0000682367+6.12724*pow(10,-6)*R+3.08377*pow(10,-10)*R*commsize;//a + b*P + c*P*s
-            outs()<<"scatter\t"<<predcommtime<<"\n";
-            return predcommtime*bfreq;
+            predcommtime = (predcommtime<=0?0:predcommtime)*bfreq;
+            outs()<<str<<"\t"<<predcommtime<<"\n";
+            return predcommtime;
         case MPI_CT_ALLTOALL:
             predcommtime = -0.0050439+0.000116252*R+6.59974*pow(10,-10)*R*commsize;//a + b*P + c*P*s
-            outs()<<"alltoall\t"<<predcommtime<<"\n";
-            return predcommtime*bfreq;
+            predcommtime = (predcommtime<=0?0:predcommtime)*bfreq;
+            outs()<<str<<"\t"<<predcommtime<<"\n";
+            return predcommtime;
         case MPI_CT_ALLGATHER:
             predcommtime = -0.00172978+0.000050436*R+3.74075*pow(10,-10)*R*commsize;//a + b*P + c*P*s
-            outs()<<"allgather\t"<<predcommtime<<"\n";
-            return predcommtime*bfreq;
+            predcommtime = (predcommtime<=0?0:predcommtime)*bfreq;
+            outs()<<str<<"\t"<<predcommtime<<"\n";
+            return predcommtime;
         default:
             outs() << "out of range in TimingSource.cpp\n";
             return -1;
