@@ -93,6 +93,12 @@ bool TimeProfiler::runOnModule(llvm::Module &M)
         }
      }
   }
+  if(wtime == NULL)
+  {
+     std::vector<Type*> Doubles;
+     FunctionType *Ft = FunctionType::get(Type::getDoubleTy(Main->getContext()),Doubles,false);
+     wtime  = Function::Create(Ft, Function::ExternalLinkage,"mpi_wtime_",&M);
+  }
 
   IRBuilder<> Builder(M.getContext());
 
