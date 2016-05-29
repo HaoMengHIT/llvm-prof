@@ -260,7 +260,7 @@ bool ProfileTimingPrint::runOnModule(Module &M)
 
             //0 means num of processes fixed, 1 means datasize fixed
             double timing = MT->count(*I, PI.getExecutionCount(BB), PI.getExecutionCount(CI)); // IO 模型
-            double timingsize = MT->newcount(*I,PI.getExecutionCount(BB),PI.getExecutionCount(CI),1);
+            //double timingsize = MT->newcount(*I,PI.getExecutionCount(BB),PI.getExecutionCount(CI),1);
             double fittingtime = MT->fittingcount(*I,PI.getExecutionCount(BB),PI.getExecutionCount(CI));
 
             if(isa<LatencyTiming>(MT))//add by haomeng.
@@ -268,7 +268,7 @@ bool ProfileTimingPrint::runOnModule(Module &M)
                auto LTR = cast<LatencyTiming>(MT);
                size_t BFreq = PI.getExecutionCount(BB);
                MPICallNUM += BFreq;
-               AmountOfMpiComm += PI.getExecutionCount(CI);//LTR->Comm_amount(*I,BFreq,PI.getExecutionCount(CI));
+               AmountOfMpiComm += LTR->Comm_amount(*I,BFreq,PI.getExecutionCount(CI));
             }
 
 #ifdef NDEBUG
@@ -279,7 +279,7 @@ bool ProfileTimingPrint::runOnModule(Module &M)
                       << BB->getName() << "\n";
 #endif
             MpiTiming += timing;
-            MpiTimingsize += timingsize*1000.0;
+            //MpiTimingsize += timingsize*1000.0;
             MpiFittingTime += fittingtime;
          }
       }
@@ -296,12 +296,11 @@ bool ProfileTimingPrint::runOnModule(Module &M)
          }
       }
    }
-   AbsoluteTiming = BlockTiming + MpiTimingsize/*MpiTiming */+ CallTiming;
+   AbsoluteTiming = BlockTiming + MpiTiming/*MpiTiming */+ CallTiming;
    outs()<<"Block Timing: "<<BlockTiming<<" ns\n";
-   outs()<<"MPI Timing1: "<<MpiTimingsize<<" ns\n";
+   outs()<<"MPI Timing: "<<MpiTiming<<" ns\n";
    outs()<<"Call Timing: "<<CallTiming<<" ns\n";
    outs()<<"Timing: "<<AbsoluteTiming<<" ns\n";
-   outs()<<"MPI Timing: "<<MpiTiming<<" ns\n";
    outs()<<"Inst Num: "<< AllIrNum << "\n";
    outs()<<"Mpi Num: "<< MPICallNUM<< "\n";
    outs()<<"Comm Amount: "<< AmountOfMpiComm<< "\n";

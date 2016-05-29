@@ -732,11 +732,10 @@ LatencyTiming::LatencyTiming()
       {"mpi_latency", MPI_LATENCY},
       {"mpi_bandwidth", MPI_BANDWIDTH}
    };
-/*   file_initializer = [](const char* file, double* param){
-      load_and_init_with_func(file, MPIFitFunc);
+   file_initializer = [](const char* file, double* param){
+      load_and_init_with_map(file,param,MPIMap);
    };
-*/ 
-    file_initializer = load_files;
+    //file_initializer = load_files;
 }
 
 std::map<std::string,FitFormula> LatencyTiming::MPIFitFunc = []
@@ -764,17 +763,37 @@ double LatencyTiming::Comm_amount(const llvm::Instruction &I,double bfreq, doubl
    if (C == MPI_CT_P2P) {
       //outs() <<"======"<< I <<"\t"<< total << "\t"  << bfreq << "\n";
       return total;
-   } else if (C <= MPI_CT_REDUCE2)
+   } else if (C == MPI_CT_REDUCE)
    {
       //outs() <<"======"<< I <<"\t"<< total << "\t"  << bfreq << "\n";
       //return C * total * log2(R) * bfreq;
-      return total;
+      return total*log2(R);
    }
-   else
+   else if(C == MPI_CT_ALLREDUCE)
    {
       //outs() <<"======"<< I <<"\t"<< total << "\t"  << bfreq << "\n";
       //return 2 * R * total * bfreq;
-      return total;
+      return 2*total*log2(R);
+   }
+   else if (C == MPI_CT_BCAST )
+   {
+      return  total*log2(R);
+   }
+   else if (C == MPI_CT_GATHER )
+   {
+      return  total*R;
+   }
+   else if (C == MPI_CT_SCATTER )
+   {
+      return  total*R;
+   }
+   else if (C == MPI_CT_ALLGATHER )
+   {
+      return  total*R*R;
+   }
+   else if (C == MPI_CT_ALLTOALL )
+   {
+      return  2*total*log2(R);
    }
 
 }
@@ -801,26 +820,41 @@ double do_cal(const char* name, double randsize[], int fixed,
     }
 }
 
+static StringRef getCallName(const CallInst* CI)
+{
+   Value* CV = const_cast<CallInst*>(CI)->getCalledValue();
+   Function* func = dyn_cast<Function>(lle::castoff(CV));
+   StringRef str = func->getName();
+   return str;
+}
 double LatencyTiming::count(const llvm::Instruction &I, double bfreq, double total) const
 {
     using namespace lle;
     if(total<DBL_EPSILON || bfreq < DBL_EPSILON) return 0.;
     const CallInst* CI = dyn_cast<CallInst>(&I);
     if(CI==NULL) return 0.;
-    //double latency = get(MPI_LATENCY), bandwidth = get(MPI_BANDWIDTH);
-    double latency = 652312, bandwidth = 307.906;
+    double latency = get(MPI_LATENCY), bandwidth = get(MPI_BANDWIDTH);
+    //double latency = 652312, bandwidth = 307.906;
     MPICategoryType C = MPI_CT_P2P;
+    double tmp = 0.0;
     try{
        C = lle::get_mpi_collection(CI);
     }catch(const std::out_of_range& e){
         return 0.;
     }
     if(C==MPI_CT_P2P){
-        return bfreq * latency + total / bandwidth;
-    }else if(C <= MPI_CT_REDUCE2)
-        return bfreq * latency + C * total * log2(R) / bandwidth;
-    else
-        return 2 * R * (bfreq * latency + total / bandwidth);
+        tmp = bfreq * latency + total / bandwidth;
+        outs() << getCallName(CI) <<" " << tmp*pow(10,-9) << "\n";
+        return tmp;
+    }else if(C <= MPI_CT_REDUCE2){
+        tmp = bfreq * log2(R) * latency + C * total * log2(R) / bandwidth;
+        outs() << getCallName(CI) <<" " << tmp*pow(10,-9) << "\n";
+        return tmp;
+    }else{
+        tmp =  2 * R * (bfreq * latency + total / bandwidth);
+        outs() << getCallName(CI) <<" " << tmp*pow(10,-9) << "\n";
+        return tmp;
+    }
 }
 
 double LatencyTiming::fittingcount(const llvm::Instruction& I, double bfreq, double total) const
@@ -841,9 +875,7 @@ double LatencyTiming::fittingcount(const llvm::Instruction& I, double bfreq, dou
    if(commsize == 0){
       return predcommtime*bfreq;
    }
-   Value* CV = const_cast<CallInst*>(CI)->getCalledValue();
-   Function* func = dyn_cast<Function>(lle::castoff(CV));
-   StringRef str = func->getName();
+   StringRef str = getCallName(CI);
    outs()<<R<<"\t"<<bfreq<<"\t"<<commsize<<"\t";
     switch(C)
     {
@@ -853,7 +885,7 @@ double LatencyTiming::fittingcount(const llvm::Instruction& I, double bfreq, dou
             outs()<<str<<"\t"<<predcommtime<<"\n";
             return predcommtime;
         case MPI_CT_ALLREDUCE:
-            predcommtime = 0.00154802+2.85057*pow(10,-6)*R+(-4.2121)*pow(10,-12)*R*commsize+2.75488*pow(10,-10)*(log(R)/log(2))*commsize;//a+b*R+c*R*s+d*log2(R)*s
+            predcommtime = 7.17705*pow(10,-6)+2.37787*pow(10,-7)*R+3.16912*pow(10,-11)*R*commsize+1.43455*pow(10,-9)*(log(R)/log(2))*commsize;//a+b*R+c*R*s+d*log2(R)*s
             predcommtime = (predcommtime<=0?0:predcommtime)*bfreq;
             outs()<<str<<"\t"<<predcommtime<<"\n";
             return predcommtime;
