@@ -1,4 +1,5 @@
 #include "passes.h"
+#include <llvm/Analysis/BlockFrequencyInfo.h>
 #include <ProfileInfo.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Function.h>
@@ -18,49 +19,51 @@ using namespace llvm;
 
 cl::opt<bool> Unsort("unsort",cl::desc("Directly print without sort order"));
 cl::opt<bool> ListAll("list-all", cl::desc("List all blocks"));
+cl::opt<bool> InstNumber("inst-number", cl::desc("List the number of  instructions"));
 cl::opt<bool> PrintAnnotatedLLVM("annotated-llvm",
-      cl::desc("Print LLVM code with frequency annotations"));
+		cl::desc("Print LLVM code with frequency annotations"));
 cl::alias PrintAnnotated2("A", cl::desc("Alias for --annotated-llvm"),
-      cl::aliasopt(PrintAnnotatedLLVM));
+		cl::aliasopt(PrintAnnotatedLLVM));
 cl::opt<bool> PrintAllCode("print-all-code",
-      cl::desc("Print annotated code for the entire program"));
+		cl::desc("Print annotated code for the entire program"));
 cl::opt<bool> ValueContentPrint("value-content",
-      cl::desc("Print detailed value content in value profiling"));
+		cl::desc("Print detailed value content in value profiling"));
 
 // PairSecondSort - A sorting predicate to sort by the second element of a pair.
 template<class T>
 struct PairSecondSortReverse
-  : public std::binary_function<std::pair<T, double>,
-                                std::pair<T, double>, bool> {
-  bool operator()(const std::pair<T, double> &LHS,
-                  const std::pair<T, double> &RHS) const {
-    return LHS.second > RHS.second;
-  }
-};
+: public std::binary_function<std::pair<T, double>,
+	std::pair<T, double>, bool> {
+		bool operator()(const std::pair<T, double> &LHS,
+				const std::pair<T, double> &RHS) const {
+			return LHS.second > RHS.second;
+		}
+	};
 
 static double ignoreMissing(double w) {
-  if (w == ProfileInfo::MissingValue) return 0;
-  return w;
+	if (w == ProfileInfo::MissingValue) return 0;
+	return w;
 }
 
 char ProfileInfoPrinterPass::ID = 0;
 
 void ProfileInfoPrinterPass::getAnalysisUsage(AnalysisUsage& AU) const
 {
-   AU.setPreservesAll();
-   AU.addRequired<ProfileInfo>();
+	AU.setPreservesAll();
+	AU.addRequired<ProfileInfo>();
+	//AU.addRequired<BlockFrequencyInfo>();
 }
 
 void ProfileInfoPrinterPass::printValueContent()
 {
 	ProfileInfo &PI = getAnalysis<ProfileInfo>();
 	std::vector<const Instruction*> Calls = PI.getAllTrapedValues(ValueInfo);
-   outs()<<"No.\t\tType\t\tContent\n";
+	outs()<<"No.\t\tType\t\tContent\n";
 	for(std::vector<const Instruction*>::const_iterator I = Calls.begin(), E = Calls.end(); I!=E; ++I){
-      const CallInst* CI = dyn_cast<CallInst>(*I);
+		const CallInst* CI = dyn_cast<CallInst>(*I);
 		std::vector<int> Contents = PI.getValueContents(CI);
 		const Value* traped = PI.getTrapedTarget(CI);
-      outs()<<PI.getTrapedIndex(CI)<<". \t";
+		outs()<<PI.getTrapedIndex(CI)<<". \t";
 		if(isa<Constant>(traped))outs()<<"Constant";
 		else outs()<<"Variable";
 		outs()<<"("<<(unsigned)PI.getExecutionCount(CI)<<"):\t";
@@ -128,7 +131,7 @@ void ProfileInfoPrinterPass::printFunctionCounts(
 	}
 }
 
-std::set<Function*>
+	std::set<Function*>
 ProfileInfoPrinterPass::printBasicBlockCounts(
 		std::vector<std::pair<BasicBlock *, double> > &Counts)
 {
@@ -178,8 +181,8 @@ void ProfileInfoPrinterPass::printValueCounts()
 	std::vector<std::pair<const CallInst*,double> > ValueCounts;
 	double TotalExecutions = 0;
 	for(int i=0,e=trapes.size();i!=e;++i){
-      const CallInst* CI = dyn_cast<CallInst>(trapes[i]);
-      if(!CI) continue;
+		const CallInst* CI = dyn_cast<CallInst>(trapes[i]);
+		if(!CI) continue;
 		ValueCounts.push_back(std::make_pair(CI, PI.getExecutionCount(CI)));
 		TotalExecutions += PI.getExecutionCount(CI);
 	}
@@ -215,151 +218,157 @@ void ProfileInfoPrinterPass::printSLGCounts()
 {
 	ProfileInfo& PI = getAnalysis<ProfileInfo>();
 	std::vector<const Instruction*> trapes = PI.getAllTrapedValues(SLGInfo);
-   if(trapes.empty()) return;
+	if(trapes.empty()) return;
 
-   outs() << "\n===" << std::string(73, '-') << "===\n";
-   outs() << "store load global profiling information:\n\n";
-   outs() <<" ##      Load\t\tStore\t\t\tStore Position\n";
+	outs() << "\n===" << std::string(73, '-') << "===\n";
+	outs() << "store load global profiling information:\n\n";
+	outs() <<" ##      Load\t\tStore\t\t\tStore Position\n";
 
-   for(unsigned i=0;i<trapes.size();i++){
-      const LoadInst* LI = dyn_cast<LoadInst>(trapes[i]);
-      if(!LI) continue;
+	for(unsigned i=0;i<trapes.size();i++){
+		const LoadInst* LI = dyn_cast<LoadInst>(trapes[i]);
+		if(!LI) continue;
 
-      unsigned idx = PI.getTrapedIndex(LI);
-      const Value* T = PI.getTrapedTarget(LI);
+		unsigned idx = PI.getTrapedIndex(LI);
+		const Value* T = PI.getTrapedTarget(LI);
 		outs() << format("%3d", idx) << ". "
 			<< *LI  <<"\n  -->";
-      if(T){
-         const StoreInst* SI = dyn_cast<StoreInst>(T);
-         assert(SI);
-         const BasicBlock* BB = SI->getParent();
-         const Function* F = BB->getParent();
-         outs() << *SI <<"\t\t ## "
-            << F->getName()<<":\""
-            << BB->getName() <<"\"\t"
-            << "\n";
-      }else{
-         outs() << "  unknow\n";
-      }
-   }
+		if(T){
+			const StoreInst* SI = dyn_cast<StoreInst>(T);
+			assert(SI);
+			const BasicBlock* BB = SI->getParent();
+			const Function* F = BB->getParent();
+			outs() << *SI <<"\t\t ## "
+				<< F->getName()<<":\""
+				<< BB->getName() <<"\"\t"
+				<< "\n";
+		}else{
+			outs() << "  unknow\n";
+		}
+	}
 }
 
 void ProfileInfoPrinterPass::printMPICounts(ProfilingType Info)
 {
-   ProfileInfo& PI = getAnalysis<ProfileInfo>();
-   auto trapes = PI.getAllTrapedValues(Info);
-   if(trapes.empty()) return;
+	ProfileInfo& PI = getAnalysis<ProfileInfo>();
+	auto trapes = PI.getAllTrapedValues(Info);
+	if(trapes.empty()) return;
 
-   outs() << "\n===" << std::string(73, '-') << "===\n";
-   outs() << "mpi profiling information:\n\n";
-   outs() <<" ##      Count\t\tWhat\t\tWhere\n";
+	outs() << "\n===" << std::string(73, '-') << "===\n";
+	outs() << "mpi profiling information:\n\n";
+	outs() <<" ##      Count\t\tWhat\t\tWhere\n";
 
-   for(unsigned i=0;i<trapes.size(); i++){
-      const CallInst* CI = cast<CallInst>(trapes[i]);
-      const BasicBlock* BB = CI->getParent();
-      const Function* F = BB->getParent();
-      outs() << format("%3d", i+1) << ". "
-         << format("%5.0f", PI.getExecutionCount(CI)) <<"\t"
-         << *PI.getTrapedTarget(CI) <<"\t"
-         << F->getName() <<":\""
-         << BB->getName() <<"\"\t\n";
-   }
+	for(unsigned i=0;i<trapes.size(); i++){
+		const CallInst* CI = cast<CallInst>(trapes[i]);
+		const BasicBlock* BB = CI->getParent();
+		const Function* F = BB->getParent();
+		outs() << format("%3d", i+1) << ". "
+			<< format("%5.0f", PI.getExecutionCount(CI)) <<"\t"
+			<< *PI.getTrapedTarget(CI) <<"\t"
+			<< F->getName() <<":\""
+			<< BB->getName() <<"\"\t\n";
+	}
 }
 
 //printMPITime - print the mpi time
-void ProfileInfoPrinterPass::printMPITime(ProfilingType Info)
+void ProfileInfoPrinterPass::printMPITime(ProfilingType Info, std::map<const CallInst*, int>& MPICallNum )
 {
-  ProfileInfo& PI = getAnalysis<ProfileInfo>();
-  auto trapes = PI.getAllTrapedValues(Info);
-  if(trapes.empty()) return;
-  outs() << "\n===" << std::string(73, '-') << "===\n";
-  outs() << "mpi time profiling information:\n\n";
-  outs() <<" ##  \tTime(sec)\tWhat\t\tWhere\n";
+	ProfileInfo& PI = getAnalysis<ProfileInfo>();
+	auto trapes = PI.getAllTrapedValues(Info);
+	if(trapes.empty()) return;
+	outs() << "\n===" << std::string(73, '-') << "===\n";
+	outs() << "mpi time profiling information:\n\n";
+	outs() <<" ##  \tTime(sec)\tWhat\tFunc num\t\tWhere\n";
 
-  std::map<StringRef, double> timeMap;
-  double alltime = 0.0;
-  for(unsigned i=0;i<trapes.size(); i++){
-     const CallInst* CI = cast<CallInst>(trapes[i]);
-     const BasicBlock* BB = CI->getParent();
-     const Function* F = BB->getParent();
+	std::map<StringRef, double> timeMap;
+	double alltime = 0.0;
+	for(unsigned i=0;i<trapes.size(); i++){
+		const CallInst* CI = cast<CallInst>(trapes[i]);
+		const BasicBlock* BB = CI->getParent();
+		const Function* F = BB->getParent();
+		std::map<const CallInst*, int>::iterator le;
+		le = MPICallNum.find(CI);
+		if(le != MPICallNum.end())
+		{
+			Value* CV = const_cast<CallInst*>(CI)->getCalledValue();
+			Function* func = dyn_cast<Function>(lle::castoff(CV));
+			if(func == NULL)
+				errs()<<"No func!\n";
+			StringRef str = func->getName();
 
-     Value* CV = const_cast<CallInst*>(CI)->getCalledValue();
-     Function* func = dyn_cast<Function>(lle::castoff(CV));
-     if(func == NULL)
-       errs()<<"No func!\n";
-     StringRef str = func->getName();
+			if(timeMap.find(str) == timeMap.end())
+				timeMap[str] = PI.getMPITime(CI);
+			else
+				timeMap[str]=timeMap[str]+PI.getMPITime(CI);
 
-     if(timeMap.find(str) == timeMap.end())
-        timeMap[str] = PI.getMPITime(CI);
-     else
-        timeMap[str]=timeMap[str]+PI.getMPITime(CI);
+			alltime += PI.getMPITime(CI);
 
-     alltime += PI.getMPITime(CI);
+			outs() << format("%3d", i+1) << ".\t"
+				<< format("%5.10f", PI.getMPITime(CI)) <<"\t"
+				<< str <<"\t"
+				<< MPICallNum[CI] <<"\t"
+				<< F->getName() <<":\""
+				<< BB->getName() <<"\"\t\n";
 
-     outs() << format("%3d", i+1) << ".\t"
-        << format("%5.10f", PI.getMPITime(CI)) <<"\t"
-        << str <<"\t"
-        << F->getName() <<":\""
-        << BB->getName() <<"\"\t\n";
-  }
-  outs() << "=====================\n";
-  int tmpi = 0;
-  for(std::map<StringRef, double>::iterator it = timeMap.begin(); it != timeMap.end(); ++it){
-     
-     outs() << format("%3d", tmpi+1) << ".\t"
-        << format("%.2f%%", (it->second/alltime)*100) << "\t"
-        << format("%10.10f", (it->second*1000))<<"/"<<format("%f",(alltime*1000)) <<"\t"
-        << it->first <<"\n";
-  }
+		}
+	}
+	outs() << "=====================\n";
+	int tmpi = 0;
+	for(std::map<StringRef, double>::iterator it = timeMap.begin(); it != timeMap.end(); ++it){
+
+		outs() << format("%3d", tmpi+1) << ".\t"
+			<< format("%.2f%%", (it->second/alltime)*100) << "\t"
+			<< format("%10.10f", (it->second*1000))<<"/"<<format("%f",(alltime*1000)) <<"\t"
+			<< it->first <<"\n";
+	}
 }
 
 namespace {
-   class ProfileAnnotator : public AssemblyAnnotationWriter {
-      ProfileInfo &PI;
-      public:
-      ProfileAnnotator(ProfileInfo &pi) : PI(pi) {}
+	class ProfileAnnotator : public AssemblyAnnotationWriter {
+		ProfileInfo &PI;
+		public:
+		ProfileAnnotator(ProfileInfo &pi) : PI(pi) {}
 
-      virtual void emitFunctionAnnot(const Function *F,
-            formatted_raw_ostream &OS) {
-         double w = PI.getExecutionCount(F);
-         if (w != ProfileInfo::MissingValue) {
-            OS << ";;; %" << F->getName() << " called "<<(unsigned)w
-               <<" times.\n;;;\n";
-         }
-      }
-      virtual void emitBasicBlockStartAnnot(const BasicBlock *BB,
-            formatted_raw_ostream &OS) {
-         double w = PI.getExecutionCount(BB);
-         if (w != ProfileInfo::MissingValue) {
-            if (w != 0) {
-               OS << "\t;;; Basic block executed " << (unsigned)w << " times.\n";
-            } else {
-               OS << "\t;;; Never executed!\n";
-            }
-         }
-      }
+		virtual void emitFunctionAnnot(const Function *F,
+				formatted_raw_ostream &OS) {
+			double w = PI.getExecutionCount(F);
+			if (w != ProfileInfo::MissingValue) {
+				OS << ";;; %" << F->getName() << " called "<<(unsigned)w
+					<<" times.\n;;;\n";
+			}
+		}
+		virtual void emitBasicBlockStartAnnot(const BasicBlock *BB,
+				formatted_raw_ostream &OS) {
+			double w = PI.getExecutionCount(BB);
+			if (w != ProfileInfo::MissingValue) {
+				if (w != 0) {
+					OS << "\t;;; Basic block executed " << (unsigned)w << " times.\n";
+				} else {
+					OS << "\t;;; Never executed!\n";
+				}
+			}
+		}
 
-      virtual void emitBasicBlockEndAnnot(const BasicBlock *BB,
-            formatted_raw_ostream &OS) {
-         // Figure out how many times each successor executed.
-         std::vector<std::pair<ProfileInfo::Edge, double> > SuccCounts;
+		virtual void emitBasicBlockEndAnnot(const BasicBlock *BB,
+				formatted_raw_ostream &OS) {
+			// Figure out how many times each successor executed.
+			std::vector<std::pair<ProfileInfo::Edge, double> > SuccCounts;
 
-         const TerminatorInst *TI = BB->getTerminator();
-         for (unsigned s = 0, e = TI->getNumSuccessors(); s != e; ++s) {
-            BasicBlock* Succ = TI->getSuccessor(s);
-            double w = ignoreMissing(PI.getEdgeWeight(std::make_pair(BB, Succ)));
-            if (w != 0)
-               SuccCounts.push_back(std::make_pair(std::make_pair(BB, Succ), w));
-         }
-         if (!SuccCounts.empty()) {
-            OS << "\t;;; Out-edge counts:";
-            for (unsigned i = 0, e = SuccCounts.size(); i != e; ++i)
-               OS << " [" << (SuccCounts[i]).second << " -> "
-                  << (SuccCounts[i]).first.second->getName() << "]";
-            OS << "\n";
-         }
-      }
-   };
+			const TerminatorInst *TI = BB->getTerminator();
+			for (unsigned s = 0, e = TI->getNumSuccessors(); s != e; ++s) {
+				BasicBlock* Succ = TI->getSuccessor(s);
+				double w = ignoreMissing(PI.getEdgeWeight(std::make_pair(BB, Succ)));
+				if (w != 0)
+					SuccCounts.push_back(std::make_pair(std::make_pair(BB, Succ), w));
+			}
+			if (!SuccCounts.empty()) {
+				OS << "\t;;; Out-edge counts:";
+				for (unsigned i = 0, e = SuccCounts.size(); i != e; ++i)
+					OS << " [" << (SuccCounts[i]).second << " -> "
+						<< (SuccCounts[i]).first.second->getName() << "]";
+				OS << "\n";
+			}
+		}
+	};
 }
 
 void ProfileInfoPrinterPass::printAnnotatedCode(
@@ -372,7 +381,7 @@ void ProfileInfoPrinterPass::printAnnotatedCode(
 		outs() << "Annotated LLVM code for the module:\n\n";
 
 		ProfileAnnotator PA(PI);
-      formatted_raw_ostream f_outs(outs());
+		formatted_raw_ostream f_outs(outs());
 
 		if (FunctionsToPrint.empty() || PrintAllCode)
 			M.print(outs(), &PA);
@@ -380,8 +389,50 @@ void ProfileInfoPrinterPass::printAnnotatedCode(
 			// Print just a subset of the functions.
 			for (std::set<Function*>::iterator I = FunctionsToPrint.begin(),
 					E = FunctionsToPrint.end(); I != E; ++I)
-            PA.emitFunctionAnnot(*I, f_outs);
+				PA.emitFunctionAnnot(*I, f_outs);
 	}
+}
+
+	std::set<Function*>
+ProfileInfoPrinterPass::printStaticBlockFrequency(
+		std::vector<std::pair<BasicBlock *, double> > &Counts)
+{
+	std::set<Function*> FunctionsToPrint;
+
+	double TotalExecutions = 0;
+	for (unsigned i = 0, e = Counts.size(); i != e; ++i)
+		TotalExecutions += Counts[i].second;
+
+	if(TotalExecutions == 0) return FunctionsToPrint;
+
+	// Sort by the frequency, backwards.
+	if(!Unsort)
+		sort(Counts.begin(), Counts.end(),
+				PairSecondSortReverse<BasicBlock*>());
+
+	outs() << "\n ========================Static Block Frequency=========================";
+	outs() << "\n===" << std::string(73, '-') << "===\n";
+	if(!ListAll)
+		outs() << "Top 20 most frequently executed basic blocks:\n\n";
+	else
+		outs() << "Sorted executed basic blocks:\n\n";
+
+	// Print out the function frequencies...
+	outs() <<" ##      %% \tFrequency\n";
+	unsigned BlocksToPrint = Counts.size();
+	if (!ListAll && BlocksToPrint > 20) BlocksToPrint = 20;
+	for (unsigned i = 0; i != BlocksToPrint; ++i) {
+		if (!Unsort && Counts[i].second == 0) break;
+		Function *F = Counts[i].first->getParent();
+		outs() << format("%3d", i+1) << ". "
+			<< format("%5g", Counts[i].second/(double)TotalExecutions*100)<<"% "
+			<< format("%5.0f", Counts[i].second) << "/"
+			<< format("%g", TotalExecutions) << "\t"
+			<< F->getName() << "() - "
+			<< Counts[i].first->getName() << "\n";
+		FunctionsToPrint.insert(F);
+	}
+	return FunctionsToPrint;
 }
 
 bool ProfileInfoPrinterPass::runOnModule(Module &M) {
@@ -392,30 +443,78 @@ bool ProfileInfoPrinterPass::runOnModule(Module &M) {
 		printValueContent();
 		return false;
 	}
+	double instcount = 0.0;
+	double mpicount = 0.0;
 
 	std::vector<std::pair<Function*, double> > FunctionCounts;
 	std::vector<std::pair<BasicBlock*, double> > Counts;
+	//add by haomeng
+	std::vector<std::pair<BasicBlock*, double> > StaticCounts;
+	std::map<const CallInst*, int> MPICallNum;
+
 	for (Module::iterator FI = M.begin(), FE = M.end(); FI != FE; ++FI) {
 		if (FI->isDeclaration()) continue;
 		double w = ignoreMissing(PI.getExecutionCount(FI));
 		FunctionCounts.push_back(std::make_pair(FI, w));
+		//add by haomeng
+		//BlockFrequencyInfo* BFI = &getAnalysis<BlockFrequencyInfo>(*FI);
+
 		for (Function::iterator BB = FI->begin(), BBE = FI->end();
 				BB != BBE; ++BB) {
 			double w = ignoreMissing(PI.getExecutionCount(BB));
 			Counts.push_back(std::make_pair(BB, w));
+
+			//add by haomeng
+			//double tmp = (double)((BFI->getBlockFreq(BB)).getFrequency());
+			//StaticCounts.push_back(std::make_pair(BB, tmp));
+			int BBCount = 0;
+			for(BasicBlock::iterator IB = BB->begin(), IE = BB->end();
+					IB != IE; ++IB) {
+				instcount+=w;
+				CallInst* CI = dyn_cast<CallInst>(&*IB);
+				if(CI == NULL) continue;
+				Value* CV = const_cast<CallInst*>(CI)->getCalledValue();
+				Function* func = dyn_cast<Function>(lle::castoff(CV));
+				if(func == NULL)
+					errs()<<"No func!\n";
+				StringRef str = func->getName();
+				if(str.startswith("mpi_"))
+				{
+					mpicount+=w;
+					if(
+							str.startswith("mpi_init_")||
+							str.startswith("mpi_comm_rank_")||
+							str.startswith("mpi_finalize_")||
+							str.startswith("mpi_wtime_")||
+							str.startswith("mpi_comm_size_")
+					  )
+						continue;
+					MPICallNum.insert(std::make_pair(CI, BBCount++));
+				}
+			}
 		}
 	}
-   // disable print execution commands, beacuse it is buggy.
-	//printExecutionCommands();
-	// Emit the most frequent function table...
-	printFunctionCounts(FunctionCounts);
-	FunctionToPrint = printBasicBlockCounts(Counts);
-	printValueCounts();
-  printSLGCounts();
-  printMPICounts(MPInfo);
-  printMPICounts(MPIFullInfo);
-	printAnnotatedCode(FunctionToPrint,M);
-  printMPITime(MPITimeInfo);
+	if(!InstNumber)
+	{
+		// disable print execution commands, beacuse it is buggy.
+		//printExecutionCommands();
+		// Emit the most frequent function table...
+		printFunctionCounts(FunctionCounts);
+		FunctionToPrint = printBasicBlockCounts(Counts);
+		printValueCounts();
+		printSLGCounts();
+		printMPICounts(MPInfo);
+		printMPICounts(MPIFullInfo);
+		printAnnotatedCode(FunctionToPrint,M);
+		printMPITime(MPITimeInfo, MPICallNum);
+		//printStaticBlockFrequency(StaticCounts);
+
+	}
+	else
+	{
+		outs()<<"Inst number:\t"<<instcount-mpicount<<"\n";
+
+	}
 
 	return false;
 }

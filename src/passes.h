@@ -4,6 +4,7 @@
 #include "TimingSource.h"
 #include "ProfileInfoWriter.h"
 #include <set>
+#include <vector>
 namespace llvm{
    /// ProfileInfoPrinterPass - Helper pass to dump the profile information for
    /// a module.
@@ -24,12 +25,15 @@ namespace llvm{
       std::set<Function*>
          printBasicBlockCounts( std::vector<std::pair<BasicBlock*, double> >&
                Counts);
+      std::set<Function*>
+         printStaticBlockFrequency( std::vector<std::pair<BasicBlock*, double> >&
+               Counts);
       void printAnnotatedCode(std::set<Function*>& FunctionToPrint,Module& M);
       void printValueCounts();
       void printValueContent();
       void printSLGCounts();
       void printMPICounts(ProfilingType Info);
-      void printMPITime(ProfilingType Info);
+      void printMPITime(ProfilingType Info, std::map<const CallInst*, int>& MPICallNum);
       virtual const char* getPassName() const {
          return "Print Profile Info";
       }
