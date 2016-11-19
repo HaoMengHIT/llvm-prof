@@ -91,7 +91,7 @@ namespace llvm {
 
     // MPICounts = count
     std::map<const CallInst*, MPICounts> MPInformation; // old mpi profiling format
-    int  RankInformation; // Rank information
+    int  RankInformation = -1; // Rank information
 
     std::map<const CallInst*, TimeCounts> MPITimeInformation; // mpi time profiling format
 

@@ -273,10 +273,9 @@ void ProfileInfoPrinterPass::printRankInfo(ProfilingType Info)
 {
 	ProfileInfo& PI = getAnalysis<ProfileInfo>();
 	int rank = PI.getRankValue(Info);
-	if(rank != -1)
-	{
-		outs() << "Rank:\t" << rank <<"\n";
-	}
+	if(rank == -1)
+		return;
+	outs() << "Rank:\t" << rank <<"\n";
 }
 
 //printMPITime - print the mpi time

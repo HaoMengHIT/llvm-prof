@@ -197,8 +197,6 @@ ProfileInfoT<Function, BasicBlock>::getRankValue(ProfilingType PT){
 	if(PT == RankInfo){
 		return RankInformation;
 	}
-	else
-		return -1;
 }
 
 template<> double

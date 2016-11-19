@@ -18,6 +18,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
@@ -213,14 +214,13 @@ void write_profiling_data_double(enum ProfilingType PT, double* Start,
 {
   int PTy;
   int outFile = getOutFile();
-
   /* Write out this record! */
   PTy = PT;
   if (write(outFile, &PTy, sizeof(int)) < 0
-      || write(outFile, &NumElements, sizeof(uint64_t)) < 0
-      || write(outFile, Start, NumElements * sizeof(double)) < 0) {
-     fprintf(stderr, "error: unable to write to output file.");
-     exit(0);
+	  || write(outFile, &NumElements, sizeof(uint64_t)) < 0
+	  || write(outFile, Start, NumElements * sizeof(double)) < 0) {
+	 fprintf(stderr, "error: unable to write to output file.");
+	 exit(0);
   }
 }
 //add by haomeng
@@ -228,9 +228,26 @@ void write_time_rank_profiling_data_double(enum ProfilingType PT, double* Start,
                           uint64_t NumElements, int* StartRank, int NumRankElements)
 {
   int PTy;
-  if(StartRank[0] == 0){//Specify the rank which output profile, default 0
-	  int outFile = getOutFile();
+  char* value;
+  if((value= getenv("MASTER_RANK")))
+  {
+	  int rank = atoi(value);
+	  if(StartRank[0] == rank){//Specify the rank which output profile, default 0
+		  int outFile = getOutFile();
 
+		  /* Write out this record! */
+		  PTy = PT;
+		  if (write(outFile, &PTy, sizeof(int)) < 0
+			  || write(outFile, &NumElements, sizeof(uint64_t)) < 0
+			  || write(outFile, Start, NumElements * sizeof(double)) < 0) {
+			 fprintf(stderr, "error: unable to write to output file.");
+			 exit(0);
+		  }
+	  }
+  }
+  else
+  {
+	  int outFile = getOutFile();
 	  /* Write out this record! */
 	  PTy = PT;
 	  if (write(outFile, &PTy, sizeof(int)) < 0

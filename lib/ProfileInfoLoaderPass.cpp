@@ -346,7 +346,8 @@ bool LoaderPass::runOnModule(Module &M) {
 
   //add by haomeng. get the value of rank
   Counters = PIL.getRawRankCounts();
-  RankInformation = Counters[0];
+  if(Counters.size() > 0)
+      RankInformation = Counters[0];
 
   MPInformation.clear();
   Counters = PIL.getRawMPICounts();
