@@ -33,6 +33,7 @@ namespace llvm{
       void printValueContent();
       void printSLGCounts();
       void printMPICounts(ProfilingType Info);
+      void printRankInfo(ProfilingType Info);
       void printMPITime(ProfilingType Info, std::map<const CallInst*, int>& MPICallNum);
       virtual const char* getPassName() const {
          return "Print Profile Info";

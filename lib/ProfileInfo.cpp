@@ -192,6 +192,15 @@ ProfileInfoT<Function,BasicBlock>::getAllTrapedValues(ProfilingType PT) {
 	return ret;
 }
 
+template<> int
+ProfileInfoT<Function, BasicBlock>::getRankValue(ProfilingType PT){
+	if(PT == RankInfo){
+		return RankInformation;
+	}
+	else
+		return -1;
+}
+
 template<> double
 ProfileInfoT<Function,BasicBlock>::getExecutionCount(const BasicBlock *BB) {
   std::map<const Function*, BlockCounts>::iterator J =

@@ -91,6 +91,7 @@ namespace llvm {
 
     // MPICounts = count
     std::map<const CallInst*, MPICounts> MPInformation; // old mpi profiling format
+    int  RankInformation; // Rank information
 
     std::map<const CallInst*, TimeCounts> MPITimeInformation; // mpi time profiling format
 
@@ -131,6 +132,9 @@ namespace llvm {
     double getExecutionCount(const CallInst* V);
 
     double getMPITime(const CallInst* V);
+
+	int getRankValue(ProfilingType T);
+
     const std::vector<int>& getValueContents(const CallInst* V);
     /** return traped instructions.
      * if Instruction is CallInst it is ValueProfiling

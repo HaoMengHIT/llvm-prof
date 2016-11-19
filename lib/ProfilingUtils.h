@@ -30,6 +30,11 @@ namespace llvm {
   void InsertPredProfilingInitCall(Function *MainFn, const char *FnName,
                                GlobalValue *Arr = 0,
                                PointerType *arrayType = 0);
+  void InsertPredMPIProfilingInitCall(Function *MainFn, const char *FnName,
+                               GlobalValue *Arr = 0,
+                               GlobalValue *ArrRank = 0,
+                               PointerType *arrayType = 0,
+							   PointerType *arrayRankType = 0);
   void InsertProfilingInitCall(Function *MainFn, const char *FnName,
                                GlobalValue *Arr = 0,
                                PointerType *arrayType = 0);

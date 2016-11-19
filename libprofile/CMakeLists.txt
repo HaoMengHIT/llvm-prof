@@ -9,6 +9,7 @@ set(SOURCES
   PredBlockProfiling.c
   PredBlockDoubleProfiling.c
   TimeProfiling.c
+  RankProfiling.c
   )
 
 include_directories(

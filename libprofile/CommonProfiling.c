@@ -223,3 +223,37 @@ void write_profiling_data_double(enum ProfilingType PT, double* Start,
      exit(0);
   }
 }
+//add by haomeng
+void write_time_rank_profiling_data_double(enum ProfilingType PT, double* Start,
+                          uint64_t NumElements, int* StartRank, int NumRankElements)
+{
+  int PTy;
+  if(StartRank[0] == 0){//Specify the rank which output profile, default 0
+	  int outFile = getOutFile();
+
+	  /* Write out this record! */
+	  PTy = PT;
+	  if (write(outFile, &PTy, sizeof(int)) < 0
+		  || write(outFile, &NumElements, sizeof(uint64_t)) < 0
+		  || write(outFile, Start, NumElements * sizeof(double)) < 0) {
+		 fprintf(stderr, "error: unable to write to output file.");
+		 exit(0);
+	  }
+  }
+}
+//add by haomeng
+void write_mpitime_profiling_data_double(enum ProfilingType PT, double* Start,
+                          uint64_t NumElements)
+{
+  int PTy;
+  int outFile = getOutFile();
+
+  /* Write out this record! */
+  PTy = PT;
+  if (write(outFile, &PTy, sizeof(int)) < 0
+      || write(outFile, &NumElements, sizeof(uint64_t)) < 0
+      || write(outFile, Start, NumElements * sizeof(double)) < 0) {
+     fprintf(stderr, "error: unable to write to output file.");
+     exit(0);
+  }
+}

@@ -268,6 +268,16 @@ void ProfileInfoPrinterPass::printMPICounts(ProfilingType Info)
 			<< BB->getName() <<"\"\t\n";
 	}
 }
+//printRankInfo - print the rank
+void ProfileInfoPrinterPass::printRankInfo(ProfilingType Info)
+{
+	ProfileInfo& PI = getAnalysis<ProfileInfo>();
+	int rank = PI.getRankValue(Info);
+	if(rank != -1)
+	{
+		outs() << "Rank:\t" << rank <<"\n";
+	}
+}
 
 //printMPITime - print the mpi time
 void ProfileInfoPrinterPass::printMPITime(ProfilingType Info, std::map<const CallInst*, int>& MPICallNum )
@@ -499,6 +509,7 @@ bool ProfileInfoPrinterPass::runOnModule(Module &M) {
 		// disable print execution commands, beacuse it is buggy.
 		//printExecutionCommands();
 		// Emit the most frequent function table...
+		printRankInfo(RankInfo);
 		printFunctionCounts(FunctionCounts);
 		FunctionToPrint = printBasicBlockCounts(Counts);
 		printValueCounts();

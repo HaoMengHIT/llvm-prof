@@ -38,6 +38,7 @@ enum ProfilingType {
    EdgeInfo64   = 105, /* Edge Profiling information with 64bit */
    BlockInfoDouble   = 106, /* Block Profiling information with double */
 	 MPITimeInfo					 = 107, /*MPI Time Profiling information*/
+	 RankInfo					 = 108 /*Rank of process Profiling information*/
 };
 
 // special flags used in value profiling

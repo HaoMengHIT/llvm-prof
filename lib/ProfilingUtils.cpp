@@ -20,9 +20,108 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/Support/raw_ostream.h>
 #include "ProfilingUtils.h"
 
 using namespace llvm;
+
+void llvm::InsertPredMPIProfilingInitCall(Function *MainFn, const char *FnName,
+                                   GlobalValue *Array,
+                                   GlobalValue *ArrayRank,
+                                   PointerType *arrayType,
+								   PointerType *arrayRankType) {
+  LLVMContext &Context = MainFn->getContext();
+  Type *ArgVTy =
+    PointerType::getUnqual(Type::getInt8PtrTy(Context));
+  Type* NumElemTy
+      = cast<ArrayType>(Array->getType()->getElementType())->getElementType();
+  PointerType *UIntPtr = arrayType ? arrayType : PointerType::get(NumElemTy, 0);
+  //add by haomeng
+  Type* NumElemRankTy
+      = cast<ArrayType>(ArrayRank->getType()->getElementType())->getElementType();
+  PointerType *UIntRankPtr = arrayRankType ? arrayRankType : PointerType::get(NumElemRankTy, 0);
+  NumElemTy = Type::getInt64Ty(Context);
+  Module &M = *MainFn->getParent();
+  Constant *InitFn = M.getOrInsertFunction(FnName, Type::getInt32Ty(Context),
+                                           Type::getInt32Ty(Context),
+                                           ArgVTy, UIntPtr,
+                                           NumElemTy,
+										   UIntRankPtr, NumElemRankTy,
+                                           (Type *)0);
+
+  // This could force argc and argv into programs that wouldn't otherwise have
+  // them, but instead we just pass null values in.
+  std::vector<Value*> Args(6);
+  Args[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+  Args[1] = Constant::getNullValue(ArgVTy);
+
+  // Skip over any allocas in the entry block.
+  BasicBlock *Entry = MainFn->begin();
+  BasicBlock::iterator InsertPos = Entry->begin();
+  while (isa<AllocaInst>(InsertPos)) ++InsertPos;
+
+  std::vector<Constant*> GEPIndices(2,
+                             Constant::getNullValue(Type::getInt32Ty(Context)));
+  unsigned NumElements = 0;
+  unsigned NumRankElements = 0;
+  if (Array&&ArrayRank) {
+    Args[2] = ConstantExpr::getGetElementPtr(Array, GEPIndices);
+    Args[4] = ConstantExpr::getGetElementPtr(ArrayRank, GEPIndices);
+    NumElements =
+      cast<ArrayType>(Array->getType()->getElementType())->getNumElements();
+    NumRankElements =
+      cast<ArrayType>(ArrayRank->getType()->getElementType())->getNumElements();
+  } else {
+    // If this profiling instrumentation doesn't have a constant array, just
+    // pass null.
+    Args[2] = ConstantPointerNull::get(UIntPtr);
+    Args[4] = ConstantPointerNull::get(UIntRankPtr);
+  }
+  Args[3] = ConstantInt::get(NumElemTy, NumElements);
+  Args[5] = ConstantInt::get(NumElemRankTy, NumRankElements);
+
+  CallInst *InitCall = CallInst::Create(InitFn, Args, "newargc", InsertPos);
+
+  // If argc or argv are not available in main, just pass null values in.
+  Function::arg_iterator AI;
+  switch (MainFn->arg_size()) {
+  default:
+  case 2:
+    AI = MainFn->arg_begin(); ++AI;
+    if (AI->getType() != ArgVTy) {
+      Instruction::CastOps opcode = CastInst::getCastOpcode(AI, false, ArgVTy,
+                                                            false);
+      InitCall->setArgOperand(1,
+          CastInst::Create(opcode, AI, ArgVTy, "argv.cast", InitCall));
+    } else {
+      InitCall->setArgOperand(1, AI);
+    }
+    /* FALL THROUGH */
+
+  case 1:
+    AI = MainFn->arg_begin();
+    // If the program looked at argc, have it look at the return value of the
+    // init call instead.
+    if (!AI->getType()->isIntegerTy(32)) {
+      Instruction::CastOps opcode;
+      if (!AI->use_empty()) {
+        opcode = CastInst::getCastOpcode(InitCall, true, AI->getType(), true);
+        AI->replaceAllUsesWith(
+          CastInst::Create(opcode, InitCall, AI->getType(), "", InsertPos));
+      }
+      opcode = CastInst::getCastOpcode(AI, true,
+                                       Type::getInt32Ty(Context), true);
+      InitCall->setArgOperand(0,
+          CastInst::Create(opcode, AI, Type::getInt32Ty(Context),
+                           "argc.cast", InitCall));
+    } else {
+      AI->replaceAllUsesWith(InitCall);
+      InitCall->setArgOperand(0, AI);
+    }
+
+  case 0: break;
+  }
+}
 
 void llvm::InsertPredProfilingInitCall(Function *MainFn, const char *FnName,
                                    GlobalValue *Array,

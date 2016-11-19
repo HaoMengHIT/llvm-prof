@@ -25,6 +25,7 @@ set(SOURCES
   datatype.h
   InstTemplate.cpp
   FreeExpression.cpp
+  RankProfiling.cpp
   )
 #some platform need disable rtti to void
 #undefined reference `typeinfo for xxx`

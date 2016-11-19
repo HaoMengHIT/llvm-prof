@@ -300,6 +300,9 @@ ProfileInfoLoader::ProfileInfoLoader(const char *ToolName,
    case MPITimeInfo:
       ReadProfilingBlockDouble(ToolName, F, ShouldByteSwap, TimeMess);
       break;
+   case RankInfo:
+      ReadProfilingBlock(ToolName, F, ShouldByteSwap, RankCounts);
+      break;
 
    default:
       errs() << ToolName << ": Unknown packet type #" << PacketType << "!\n";
