@@ -36,10 +36,14 @@ static void IncrementBlockCounters(llvm::Value* Inc, unsigned Index, GlobalVaria
 
    // Load, increment and store the value back.
    Value* OldVal = Builder.CreateLoad(ElementPtr, "OldBlockCounter");
+   LoadInst* loadInst = dyn_cast<LoadInst>(OldVal);
+   loadInst->setVolatile(true);
    Value* NewVal = Builder.CreateFAdd(
        OldVal, Builder.CreateSIToFP(Inc, Type::getDoubleTy(Context)),
        "NewBlockCounter");
-   Builder.CreateStore(NewVal, ElementPtr);
+   Value* storeTmp = Builder.CreateStore(NewVal, ElementPtr);
+   StoreInst* storeInst = dyn_cast<StoreInst>(storeTmp);
+   storeInst->setVolatile(true);
 }
 
 bool PredBlockDoubleProfiler::runOnModule(Module& M)
