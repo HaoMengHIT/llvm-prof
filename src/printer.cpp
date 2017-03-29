@@ -329,6 +329,8 @@ void ProfileInfoPrinterPass::printMPITime(ProfilingType Info, std::map<const Cal
 			<< format("%10.10f", (it->second*1000))<<"/"<<format("%f",(alltime*1000)) <<"\t"
 			<< it->first <<"\n";
 	}
+	outs() << "=====================\n";
+	outs() << "Total mpi time:\t" << alltime <<"\n";
 }
 
 namespace {

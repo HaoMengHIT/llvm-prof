@@ -290,8 +290,17 @@ ProfileInfoLoader::ProfileInfoLoader(const char *ToolName,
       break;
 
    case EdgeInfo64:
+	  {
       ReadProfilingBlock<uint64_t>(ToolName, F, ShouldByteSwap, EdgeCounts);
+	  uint64_t totalCount = 0;
+	  for(int i = 0; i < EdgeCounts.size();i++)
+	  {
+		  totalCount+=EdgeCounts[i];
+	  }
+	  outs()<<"total instrumented ins:\t" << totalCount<<"\n";
       break;
+
+	  }
    //add by haomeng
    case BlockInfoDouble:
       ReadProfilingBlockDouble(ToolName, F, ShouldByteSwap, BlockCounts);
