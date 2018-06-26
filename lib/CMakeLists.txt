@@ -2,6 +2,7 @@ set(SOURCES
   ValueUtils.cpp
   ValueProfiling.cpp
   EdgeProfiling.cpp
+  EdgeRankProfiling.cpp
   #GCOVProfiling.cpp					#seems llvm 3.4 keeps gcov profiling
   OptimalEdgeProfiling.cpp
   PathProfileInfo.cpp

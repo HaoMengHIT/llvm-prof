@@ -2,6 +2,7 @@
 #define INITIALIZE_PROFILER_PASS_H_H
 namespace llvm{
 void initializeEdgeProfilerPass(PassRegistry&);
+void initializeEdgeRankProfilerPass(PassRegistry&);
 void initializePathProfilerPass(PassRegistry&);
 void initializeGCOVProfilerPass(PassRegistry&);
 

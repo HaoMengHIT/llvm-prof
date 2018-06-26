@@ -3,6 +3,7 @@ set(SOURCES
   CommonProfiling.c
   PathProfiling.c
   EdgeProfiling.c
+  EdgeRankProfiling.c
   OptimalEdgeProfiling.c
   ValueProfiling.c
   MPIProfiling.c

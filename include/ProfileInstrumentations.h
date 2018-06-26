@@ -67,6 +67,7 @@ ModulePass *createPathProfileVerifierPass();
 
 // Insert edge profiling instrumentation
 ModulePass *createEdgeProfilerPass();
+ModulePass *createEdgeRankProfilerPass();
 
 // Insert optimal edge profiling instrumentation
 ModulePass *createOptimalEdgeProfilerPass();

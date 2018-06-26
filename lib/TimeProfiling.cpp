@@ -1,3 +1,4 @@
+#define DEBUG_TYPE "insert-edge-profiling"
 #include "preheader.h"
 #include <llvm/Pass.h>
 #include <llvm/IR/Module.h>
