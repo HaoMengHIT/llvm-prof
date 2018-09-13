@@ -112,9 +112,12 @@ bool EdgeRankProfiler::runOnModule(Module &M) {
 			Value* CV = const_cast<CallInst*>(CI)->getCalledValue();
 			Function* func = dyn_cast<Function>(castoff(CV));
 			if(func == NULL)
+			{
 				errs()<<"No func!\n";
+				continue;
+			}
 			StringRef str = func->getName();
-			if(str.startswith("mpi_comm_rank_")){
+			if(str.startswith("mpi_comm_rank_")||str.startswith("MPI_Comm_rank")){
 				CommRank = CI;
 				CommRankFunc = func;
 				++I;

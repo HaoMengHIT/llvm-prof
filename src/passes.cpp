@@ -134,7 +134,10 @@ bool ProfileInfoComm::runOnModule(Module &M)
       Value* CV = const_cast<CallInst*>(CI)->getCalledValue();
       Function* func = dyn_cast<Function>(lle::castoff(CV));
       if(func == NULL)
+      {
          errs()<<"No func!\n";
+	 continue;
+      }
       StringRef str = func->getName();
       if(str.startswith("mpi_")){
          outs()<<str<<"\t"<<(size_t)(MpiComm/BFreq)<<"\t" << MpiComm<<"\t"<<BFreq<<"\n";
@@ -239,7 +242,10 @@ bool ProfileTimingPrint::runOnModule(Module &M)
                   Value* CV = const_cast<CallInst*>(CI)->getCalledValue();
                   Function* func = dyn_cast<Function>(lle::castoff(CV));
                   if(func == NULL)
+		  {
                      errs()<<"No func!\n";
+		     continue;
+	          }
                   StringRef str = func->getName();
                   if(str.startswith("mpi_")){
                      if(str.startswith("mpi_init_")||str.startswith("mpi_comm_rank_")||str.startswith("mpi_comm_size_"))

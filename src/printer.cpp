@@ -301,7 +301,10 @@ void ProfileInfoPrinterPass::printMPITime(ProfilingType Info, std::map<const Cal
 			Value* CV = const_cast<CallInst*>(CI)->getCalledValue();
 			Function* func = dyn_cast<Function>(lle::castoff(CV));
 			if(func == NULL)
+			{
 				errs()<<"No func!\n";
+				continue;
+			}
 			StringRef str = func->getName();
 
 			if(timeMap.find(str) == timeMap.end())
@@ -487,7 +490,10 @@ bool ProfileInfoPrinterPass::runOnModule(Module &M) {
 				Value* CV = const_cast<CallInst*>(CI)->getCalledValue();
 				Function* func = dyn_cast<Function>(lle::castoff(CV));
 				if(func == NULL)
+				{
 					errs()<<"No func!\n";
+					continue;
+				}
 				StringRef str = func->getName();
 				if(str.startswith("mpi_"))
 				{

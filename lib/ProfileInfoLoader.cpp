@@ -298,6 +298,7 @@ ProfileInfoLoader::ProfileInfoLoader(const char *ToolName,
 		  totalCount+=EdgeCounts[i];
 	  }
 	  outs()<<"total instrumented ins:\t" << totalCount<<"\n";
+	  outs()<<"Helo world\n";
       break;
 
 	  }

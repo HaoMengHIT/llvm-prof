@@ -46,7 +46,10 @@ bool RankProfiler::runOnModule(llvm::Module &M)
 			Value* CV = const_cast<CallInst*>(CI)->getCalledValue();
 			Function* func = dyn_cast<Function>(lle::castoff(CV));
 			if(func == NULL)
+			{
 				errs()<<"No func!\n";
+				continue;
+			}
 			StringRef str = func->getName();
 			if(str.startswith("mpi_comm_rank_")){
 				CommRank = CI;
